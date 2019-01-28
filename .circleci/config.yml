@@ -1,0 +1,48 @@
+---
+version: 2.1
+orbs:
+  aws-cli: circleci/aws-cli@0.1.8
+jobs:
+  deploy_dev_to_aws:
+    docker:
+      -
+        image: "circleci/node:10.7.0"
+    steps:
+      - checkout
+      - run: sudo apt-get install python-dev
+      - aws-cli/install
+      -
+        run:
+            command: "sudo npm install -g npm@latest"
+            name: "update npm"
+      -
+        restore_cache:
+            key: dependency-cache-{{ checksum "package.json" }}
+      -
+        run:
+            command: "npm install"
+            name: "npm install"
+      -
+        save_cache:
+            key: dependency-cache-{{ checksum "package.json" }}
+            paths:
+            - ./node_modules
+      -
+        deploy:
+            command: |
+              export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY}
+              export AWS_SECRET_ACCESS_KEY=${AWS_ACCESS_SECRET}
+              npm run deploy
+            name: "deploy application to aws"
+
+workflows:
+  version: 2.1
+  build_and_deploy_to_aws:
+    jobs:
+      -
+        deploy_dev_to_aws:
+            context: development
+            filters:
+                branches:
+                    only:
+                    - develop
